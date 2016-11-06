@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import re
+import numpy as np
 from bs4 import BeautifulSoup, SoupStrainer
 
 
@@ -70,30 +71,61 @@ def parse(infile):
 
 def output(table, seen_link):
     length = len(seen_link)
+    d = 0.85
     count = 0
-    print length
-    span_table = [[0]*length]*length
+    span_table = list()
+
+    #build span_table
+    count_i = 0
+    count_j = 0
+    for i in seen_link:
+        span_table.append([])
+        for j in seen_link:
+            try:
+                ij_content = table[i][j]
+            except:
+                ij_content = 0
+
+            span_table[count_i].append(ij_content)
+            count_j += 1
+
+        count_j = 0
+        count_i += 1
+
+    #average span_table
+    for i in span_table:
+        total = sum(i)
+        try:
+            i[:] = [(x/float(total))*d for x in i]
+        except:
+            pass
+
+    #transpose matrix (span_table)
+    T_table = list()
+    for i in range(length):
+        T_table.append([])
+        for j in range(length):
+            T_table[i].append(span_table[j][i])
 
     with open('./output.csv', 'w') as fout:
+        #print columns
         for k in seen_link:
-            fout.write(str(count))
+            fout.write('['+str(count+1)+']')
             if count != length-1:
                 fout.write(',')
             count += 1
+        fout.write(',result')
         fout.write('\n')
-        
-        for i in seen_link:
-            count = 0 
-            for j in seen_link:
-                try:
-                    fout.write(str(table[i][j]))
-                    if count != length-1:
-                        fout.write(',')
-                except:
-                    fout.write('0')
-                    if count != length-1:
-                        fout.write(',')
-                count += 1
+        #print content
+        for i in range(length):
+            for j in range(length):
+                if i == j:
+                    fout.write(str(T_table[i][j]-1))
+                else:
+                    fout.write(str(T_table[i][j]))
+                fout.write(',')
+                if j == length-1:
+                    fout.write(str((d-1)/length))
             fout.write('\n')
 
 def main():
