@@ -137,7 +137,7 @@ def output(table, seen_link):
         for j in range(length):
             T_table[i].append(span_table[j][i])
 
-    with open('./output.csv', 'w') as fout:
+    with open('../matrix.csv', 'w') as fout:
         #print columns
         for k in seen_link:
             fout.write('url['+str(count+1)+']')

@@ -2,7 +2,7 @@
 
 usage
 ----------------
-    python src/parseLink.py [WARC]
+    python src/parseLink.py [WARC] [matrix|inout]
 
 
 requirements
