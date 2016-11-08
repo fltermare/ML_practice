@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import argparse
 import re
 import numpy as np
@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 def getopt():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("infile")
+    parser.add_argument("types", choices=['matrix', 'inout'])
     args = parser.parse_args()
     return args
 
@@ -42,8 +43,10 @@ def target(data, host, page, table, seen_link):
     return ans 
 
 
-def parse(infile):
-
+def parse(infile, types):
+    '''
+    parse WARC
+    '''
     table = dict()
     seen_link = set()
     with open(infile, 'r') as fdata:
@@ -65,11 +68,38 @@ def parse(infile):
             else:
                 data += line
         linkList = target(data, host, page, table, seen_link)
-    
-    output(table, seen_link)
+    if types == 'matrix':
+        output(table, seen_link)
+    elif types == 'inout':
+        linkFromTo(table, seen_link)
+
+
+def linkFromTo(table, seen_link):
+    inOut = dict()
+    #[0] # of in(from)
+    #[1] distinct in(from)
+    #[2] # of out(to)
+    #[3] distinct out(to)
+    #[4] link to self
+    for kfrom, v in table.items():
+        for kkto, count in v.items():
+            inOut[kkto] = inOut.get(kkto, [0, set(), 0, set(), 0])
+            inOut[kkto][0] += 1
+            inOut[kkto][1].add(kfrom)
+            inOut[kfrom] = inOut.get(kfrom, [0, set(), 0, set(), 0])
+            inOut[kfrom][2] += count
+            inOut[kfrom][3].add(kkto)
+            if kkto == kfrom:
+                inOut[kkto][4] += 1
+    for kfrom, v in inOut.items():
+        #if v[0] != len(v[1]) or v[2] != len(v[3]) or v[4] != 0:
+        print (v[0], len(v[1]), v[2], len(v[3]), v[4]), kfrom
 
 
 def output(table, seen_link):
+    '''
+    output matrix
+    '''
     length = len(seen_link)
     d = 0.85
     count = 0
@@ -110,27 +140,29 @@ def output(table, seen_link):
     with open('./output.csv', 'w') as fout:
         #print columns
         for k in seen_link:
-            fout.write('['+str(count+1)+']')
+            fout.write('url['+str(count+1)+']')
             if count != length-1:
                 fout.write(',')
             count += 1
-        fout.write(',result')
+        fout.write(',damping,result')
         fout.write('\n')
         #print content
         for i in range(length):
             for j in range(length):
                 if i == j:
-                    fout.write(str(T_table[i][j]-1))
+                    fout.write(str(T_table[i][j]))
+                    #fout.write(str(T_table[i][j]-1))
                 else:
                     fout.write(str(T_table[i][j]))
                 fout.write(',')
                 if j == length-1:
-                    fout.write(str((d-1)/length))
+                    fout.write(str((1-d)/length))
+                    fout.write(',url['+str(i+1)+']')
             fout.write('\n')
 
 def main():
     args = getopt()
-    l = parse(args.infile)
+    l = parse(args.infile, args.types)
 
 
 if __name__ == "__main__":
